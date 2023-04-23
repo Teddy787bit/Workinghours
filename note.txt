@@ -4,3 +4,17 @@ old_time = datetime.datetime.now()
 new_time = old_time - datetime.timedelta(hours=2, minutes=10)
 time_difference = divmod((old_time - new_time).total_seconds())
 print(time_difference)
+\<script>
+
+  var reader = new FileReader();
+  reader.onload = function(event) {
+  window.filedata = event.target.result;
+    }
+
+
+function uploadFile() {
+  var input = document.getElementById("files");
+  var file = input.files[0];
+  reader.readAsText(file);
+}
+</script>
