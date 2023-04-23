@@ -1,0 +1,5 @@
+.hrsenv
+*.csv
+*.py
+*.txt
+.vscode
