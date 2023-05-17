@@ -9,31 +9,94 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha3/dist/js/bootstrap.bundle.min.js" integrity="sha384-ENjdO4Dr2bkBIFxQpeoTz1HIcje39Wm4jDKdf19U8gI4ddQ3GYNS7NTKfAdVQSZe" crossorigin="anonymous"></script>
     <link rel="stylesheet" href="https://pyscript.net/latest/pyscript.css" />
     <script defer src="https://pyscript.net/latest/pyscript.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css" />
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+
 </head>
 <body>
-    <h1>Working hours calculations.</h1>
-    <input type="file" id="files" class="form-control form-control-sm" accept='.csv,.xlsx,.xls'>
-    <div>
-    <table class="table" id="result">
-    </table>
-    </div>
-    <h1 id="print"></h1>
+<nav class="navbar bg-body-tertiary">
+  <div class="container">
+    <a class="navbar-brand" href="#">
+    Working Hour Calculater
+    </a>
+    <a class="navbar-brand" href="">How To?</a>
+  </div>
+</nav>
+
+<div class="form-group border text-center mt-3" >
+<form class="border-class">
+  <div class="form-outline m-2">
+  <input class="form-control col-2" type="file" id="files"  >
+</div>
+<div class="form-outline sm-12">
+   <label for="selcol" class="form-label sm-1 col-5">Select Column :-</label>
+  <select id="colname" name="selcol" class="  sm-1 col-5"></select>
+</div>
+<div class="form-outline ">
+    <label for="wrkhrs" class="form-label   col-5">Working Hours :-</label>
+  <input type="text" class="col-5" name="wrkhrs" placeholder="hh:mm" id="wrkhrs">
+</div>
+<div class="form-outline">
+  <label for="exhrs" class="form-label col-5">Extra Hours :-</label>
+  <input type="text" name="exhrs" class="col-5"  placeholder="hh:mm" id="exhrs">
+</div>
+<div class="mb-2">
+  <!-- Submit button -->
+  <button type="button" class="btn btn-primary btn-block" id="attcal">Calculate</button>
+</div>
+
+</form>
+</div>
+
+
      <py-config>
         packages = ["numpy","pandas","openpyxl"]
       </py-config>
 
 <py-script>
-from js import console, document ,Object, window
+from js import console, document ,Object, window 
 from pyodide.ffi import create_proxy,JsProxy ,to_js
 import asyncio
 import pandas as pd
 from io import StringIO
+from pyscript import Element
+import re as regex
 
 reader = js.FileReader.new()
-def diffinsecond(starttime):
-    endtime= "08:30:00"
+'''
+This fucntion will check format of given format
+format should be hh:mm:ss
+'''
+
+def checkformat(ttime):
+  chtime = boll(regex.search("\d{1,2}:\d{1,2}:\d{1,2}",chtime))
+  return chtime
+
+'''
+This function will return seconds from given time
+'''
+def getsecond(ttime):
+  ttimelst = ttime.split(":")
+  tthr = int(ttimelst[0])
+  ttmm = int(ttimest[1])
+  if len(ttimelst) == 2 :
+    ttss = int(ttimest[2])
+  else:
+    ttss = 0
+  second = tthr*3600 + ttmm*60 + ttss
+  return second
+'''
+This function will calculate second difference between Starttime ans endrime 
+''' 
+def diffinsecond(starttime,endtime):
+
     startt = starttime.split(":")
     endst = endtime.split(":")
+    if len(endst) == 3:
+      edsec = int(endst[2])
+    else:
+      edsec=int("00")
+      
     ##
     sthr= int(startt[0])
     stmin = int(startt[1])
@@ -41,21 +104,24 @@ def diffinsecond(starttime):
     ##
     edhr = int(endst[0])
     edmin = int(endst[1])
-    edsec = int(endst[2])
+   
     stsecond = sthr*3600 + stmin*60 + stsec
     edsecond = edhr*3600 + edmin*60 + edsec
     diffsecond= stsecond - edsecond
     return diffsecond
 
-async def lettry(event):
+async def cal(event,col,wrhr):
   filesList = event.target.files.to_py()
   file = filesList.item(0)
+  console.log(file)
   file_content = await file.text()
   df = pd.read_csv(StringIO(file_content),engine="python")
-  tbl=df.to_html(index=False)
+  tbl=df.to_html(index=False,classes=["table","table-bordered","table-dark"])  
   document.getElementById("result").innerHTML+=tbl
-  df["diff"]=[diffinsecond(df["Time"][i]) for i in range(len(df["Time"]))]
-  numsum = df.loc[df["diff"] != -30600].sum() 
+  df["diff"]=[diffinsecond(df[col][i]) for i in range(len(df[col]),)]
+  secwrhr = getsecond(wrhr)
+  ##Calculate Hours
+  numsum = df.loc[df["diff"] != -secwrhr].sum() 
   min1= (numsum["diff"] / 60)
   hrq = int((min1 / 60))
   difm =int((min1 % 60))
@@ -63,10 +129,37 @@ async def lettry(event):
     txt=f"You need {hrq}.Hr {difm}.Min More"
   else:
     txt=f"You have {hrq}.Hr {difm}.Min More"
-  document.getElementById("print").innerHTML= txt
+  console.log(txt)
+  window.alert(txt)
 
+async def getItem(event):
+  selecttag = document.getElementById("colname")
+  filesList = event.target.files.to_py()
+  file = filesList.item(0)
+  file_content = await file.text()
+  df = pd.read_csv(StringIO(file_content),engine="python")
+  colname = list(df.columns.values)
+  for i in colname:
+    option = document.createElement("option")
+    option.text = str(i)
+    selecttag.add(option)
+
+async def Calculate(event):
+  col = document.getElementById("colname").value
+  console.log(col)
+  wrhrtag = document.getElementById("wrkhrs")
+  exhrtag = document.getElementById("exhrs") 
+  wrhr = wrhrtag.value
+  exhr= exhrtag.value
+  if wrhr == "" :
+    wrhr = "08:30:00"
+  cal(event,col,wrhr)
+  #This will round up hours 
+
+attcal=document.getElementById("attcal")
+attcal.addEventListener("click",create_proxy(Calculate),False)
 fileInput = document.getElementById("files")
-fileInput.addEventListener("change",create_proxy(lettry),False)
+fileInput.addEventListener("change",create_proxy(getItem),False)
 </py-script>
 </body>
 </html>
